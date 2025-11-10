@@ -294,31 +294,46 @@ function populateDropdowns() {
   }
 }
 
+// Ganti fungsi renderCalendar lama dengan fungsi ini
 function renderCalendar(month, year) {
   calendarBody.innerHTML = "";
+
+  // hari dalam minggu untuk tanggal 1 (0 = Minggu, 1 = Senin, ...)
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  let date = 1;
-  for (let i = 0; i < 6; i++) {
+  // kita akan selalu render 6 baris x 7 kolom = 42 sel
+  for (let r = 0; r < 6; r++) {
     const row = document.createElement("tr");
-    for (let j = 0; j < 7; j++) {
+    for (let c = 0; c < 7; c++) {
       const cell = document.createElement("td");
-      if (i === 0 && j < firstDay) {
-        cell.textContent = "";
-      } else if (date > daysInMonth) {
-        break;
-      } else {
-        cell.textContent = date;
-        const holiday = holidays.find(h => h.day === date && h.month === month);
+      const cellIndex = r * 7 + c;                 // 0..41
+      const dayNumber = cellIndex - firstDay + 1;  // hitung nomor tanggal untuk sel ini
+
+      if (dayNumber >= 1 && dayNumber <= daysInMonth) {
+        // tanggal valid di bulan ini
+        cell.textContent = dayNumber;
+
+        // cek apakah hari ini adalah holiday dari array holidays
+        const holiday = holidays.find(h => h.day === dayNumber && h.month === month);
         if (holiday) {
           cell.classList.add("highlight");
           cell.title = holiday.name;
-          cell.onclick = () => showPopup(`${date} ${monthNames[month]} ${year}`, holiday.name);
+          cell.onclick = () => showPopup(`${dayNumber} ${monthNames[month]} ${year}`, holiday.name);
+        } else {
+          // klik biasa (opsional: bisa tambah fungsi show/notes)
+          cell.onclick = () => {
+            /* aksi klik tanggal non-holiday (jika ada) */
+          };
         }
-        row.appendChild(cell);
-        date++;
+
+      } else {
+        // sel kosong (tanggal dari bulan sebelah)
+        cell.textContent = "";
+        cell.classList.add("out");
       }
+
+      row.appendChild(cell);
     }
     calendarBody.appendChild(row);
   }
