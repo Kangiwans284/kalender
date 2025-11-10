@@ -5,18 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Kalender Interaktif Hari Nasional</title>
 <style>
-  /* ====== Tampilan Modern Kalender Interaktif ====== */
+/* ====== Tampilan Modern Kalender Interaktif ====== */
 body {
   font-family: "Poppins", sans-serif;
   background: linear-gradient(135deg, #d7f2f5, #f6f9fc);
   margin: 0;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   min-height: 100vh;
   padding: 20px;
 }
 
+/* ====== Judul & Footer ====== */
+.judul-kalender {
+  text-align: center;
+  font-size: 28px;
+  color: #009688;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+  font-weight: 600;
+}
+
+.footer-kalender {
+  text-align: center;
+  margin-top: 25px;
+  font-size: 14px;
+  color: #555;
+  background: linear-gradient(90deg, #e0f2f1, #f0fdfa);
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+  font-family: "Poppins", sans-serif;
+}
+
+/* ====== Struktur Utama ====== */
 .container {
   display: flex;
   gap: 25px;
@@ -80,14 +104,9 @@ table {
   border-collapse: collapse;
   text-align: center;
 }
-/* Tambahkan ini di bawah aturan table { ... } */
+
 table, th, td {
   border: 1px solid #ccc;
-  border-collapse: collapse;
-}
-
-td, th {
-  border: 1px solid #ddd;
 }
 
 th {
@@ -101,25 +120,7 @@ td {
   padding: 12px;
   text-align: center;
   font-size: 15px;
-  transition: background 0.3s;
-}
-
-td:hover {
-  background: #e0f2f1;
-}
-
-th {
-  background-color: #009688;
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-td {
-  padding: 12px;
-  font-size: 15px;
-  border-radius: 10px;
+  border-radius: 4px;
   cursor: pointer;
   transition: background 0.3s, transform 0.2s;
 }
@@ -220,7 +221,7 @@ td:hover {
   background: #00796b;
 }
 
-/* Responsif */
+/* ====== Responsif ====== */
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
@@ -236,45 +237,52 @@ td:hover {
 }
 </style>
 </head>
+
 <body>
-<div class="container">
-  <div class="calendar">
-    <header>
-      <button id="prevMonth">❮</button>
-      <div>
-        <select id="monthSelect"></select>
-        <select id="yearSelect"></select>
-      </div>
-      <button id="nextMonth">❯</button>
-    </header>
-    <table id="calendarTable">
-      <thead>
-        <tr>
-          <th>Min</th>
-          <th>Sen</th>
-          <th>Sel</th>
-          <th>Rab</th>
-          <th>Kam</th>
-          <th>Jum</th>
-          <th>Sab</th>
-        </tr>
-      </thead>
-      <tbody id="calendarBody"></tbody>
-    </table>
+  <h1 class="judul-kalender">📅 Kalender Interaktif Indonesia</h1>
+
+  <div class="container">
+    <div class="calendar">
+      <header>
+        <button id="prevMonth">❮</button>
+        <div>
+          <select id="monthSelect"></select>
+          <select id="yearSelect"></select>
+        </div>
+        <button id="nextMonth">❯</button>
+      </header>
+      <table id="calendarTable">
+        <thead>
+          <tr>
+            <th>Min</th>
+            <th>Sen</th>
+            <th>Sel</th>
+            <th>Rab</th>
+            <th>Kam</th>
+            <th>Jum</th>
+            <th>Sab</th>
+          </tr>
+        </thead>
+        <tbody id="calendarBody"></tbody>
+      </table>
+    </div>
+
+    <div class="sidebar">
+      <h3>Hari Nasional</h3>
+      <div id="holidayList"></div>
+    </div>
   </div>
 
-  <div class="sidebar">
-    <h3>Hari Nasional</h3>
-    <div id="holidayList"></div>
-  </div>
-</div>
+  <footer class="footer-kalender">
+    © 2025 Kang Iwans. Semua hak cipta dilindungi.
+  </footer>
 
-<!-- Popup -->
-<div class="popup" id="popup">
-  <h4 id="popupTitle"></h4>
-  <p id="popupDesc"></p>
-  <button id="closePopup">Tutup</button>
-</div>
+  <!-- Popup -->
+  <div class="popup" id="popup">
+    <h4 id="popupTitle"></h4>
+    <p id="popupDesc"></p>
+    <button id="closePopup">Tutup</button>
+  </div>
 
 <script>
 const monthNames = [
@@ -321,43 +329,32 @@ function populateDropdowns() {
   }
 }
 
-// Ganti fungsi renderCalendar lama dengan fungsi ini
 function renderCalendar(month, year) {
   calendarBody.innerHTML = "";
 
-  // hari dalam minggu untuk tanggal 1 (0 = Minggu, 1 = Senin, ...)
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // kita akan selalu render 6 baris x 7 kolom = 42 sel
   for (let r = 0; r < 6; r++) {
     const row = document.createElement("tr");
     for (let c = 0; c < 7; c++) {
       const cell = document.createElement("td");
-      const cellIndex = r * 7 + c;                 // 0..41
-      const dayNumber = cellIndex - firstDay + 1;  // hitung nomor tanggal untuk sel ini
+      const cellIndex = r * 7 + c;
+      const dayNumber = cellIndex - firstDay + 1;
 
       if (dayNumber >= 1 && dayNumber <= daysInMonth) {
-        // tanggal valid di bulan ini
         cell.textContent = dayNumber;
 
-        // cek apakah hari ini adalah holiday dari array holidays
         const holiday = holidays.find(h => h.day === dayNumber && h.month === month);
         if (holiday) {
           cell.classList.add("highlight");
           cell.title = holiday.name;
           cell.onclick = () => showPopup(`${dayNumber} ${monthNames[month]} ${year}`, holiday.name);
         } else {
-          // klik biasa (opsional: bisa tambah fungsi show/notes)
-          cell.onclick = () => {
-            /* aksi klik tanggal non-holiday (jika ada) */
-          };
+          cell.onclick = () => {};
         }
-
       } else {
-        // sel kosong (tanggal dari bulan sebelah)
         cell.textContent = "";
-        cell.classList.add("out");
       }
 
       row.appendChild(cell);
@@ -386,11 +383,11 @@ function showPopup(title, desc) {
   const popup = document.getElementById("popup");
   document.getElementById("popupTitle").textContent = title;
   document.getElementById("popupDesc").textContent = desc;
-  popup.style.display = "block";
+  popup.classList.add("active");
 }
 
 document.getElementById("closePopup").onclick = () => {
-  document.getElementById("popup").style.display = "none";
+  document.getElementById("popup").classList.remove("active");
 };
 
 document.getElementById("prevMonth").onclick = () => {
