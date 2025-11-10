@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Kalender Sederhana dengan Pilihan Bulan & Tahun</title>
+  <title>Kalender Sederhana dengan Hari Nasional Editable</title>
   <style>
     :root{--bg:#f6f8fa;--card:#ffffff;--accent:#0ea5a4;--muted:#6b7280}
     *{box-sizing:border-box}
     body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0; padding:24px; color:#0f172a}
-    .wrap{max-width:920px;margin:0 auto}
+    .wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:3fr 1fr;gap:20px}
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(2,6,23,0.06)}
     header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
     h1{font-size:18px;margin:0}
@@ -16,18 +16,27 @@
     button{background:var(--accent);color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
     .small{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--muted);padding:6px 10px}
     select{padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.1);background:#f8fafc;font-weight:600}
-    .month-year{font-weight:700;font-size:16px}
     .calendar{margin-top:14px}
     .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;color:var(--muted);font-size:13px}
     .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px}
     .cell{min-height:86px;border-radius:8px;padding:8px;background:linear-gradient(180deg,rgba(2,6,23,0.01),transparent);position:relative}
     .cell.out{opacity:0.35}
     .cell.today{box-shadow:inset 0 0 0 2px rgba(14,165,164,0.18);border:1px solid rgba(14,165,164,0.15)}
+    .cell.holiday{background:rgba(255,220,150,0.25);border:1px solid rgba(255,180,0,0.4)}
     .date{position:absolute;top:8px;right:8px;font-weight:700}
     .events{margin-top:28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
     .event{background:rgba(14,165,164,0.12);padding:6px 8px;border-radius:6px;color:#064e4a}
     .footer{margin-top:12px;color:var(--muted);font-size:13px}
-    @media (max-width:640px){.cell{min-height:68px}.date{font-size:12px}}
+    .sidebar{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(2,6,23,0.06)}
+    .sidebar h2{font-size:16px;margin:0 0 12px 0}
+    .holiday-list{display:flex;flex-direction:column;gap:8px;max-height:480px;overflow-y:auto;margin-bottom:10px}
+    .holiday-item{border-radius:8px;padding:8px 10px;background:#f8fafc;border:1px solid rgba(15,23,42,0.08);cursor:pointer}
+    .holiday-item:hover{background:#e6f8f7}
+    .form-add{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    input,select{font-size:14px}
+    input[type="text"],input[type="number"]{padding:6px 8px;border-radius:8px;border:1px solid rgba(15,23,42,0.1);width:100%}
+    .btn-add{background:var(--accent);color:white;border:none;padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+    @media(max-width:820px){.wrap{grid-template-columns:1fr}.sidebar{order:-1;margin-bottom:16px}}
   </style>
 </head>
 <body>
@@ -51,7 +60,19 @@
         <div class="grid" id="grid"></div>
       </div>
 
-      <div class="footer">Klik tanggal untuk menambahkan catatan/agenda kecil (disimpan sementara di localStorage browser).</div>
+      <div class="footer">Klik tanggal untuk menambahkan catatan/agenda kecil. Hari nasional bisa Anda ubah atau tambahkan di kolom kanan.</div>
+    </div>
+
+    <div class="sidebar">
+      <h2>Hari Penting Nasional</h2>
+      <div id="holidayList" class="holiday-list"></div>
+      <div class="form-add">
+        <label>Tambah Hari Nasional:</label>
+        <select id="holidayMonth"></select>
+        <input type="number" id="holidayDate" placeholder="Tanggal (1-31)">
+        <input type="text" id="holidayName" placeholder="Nama Hari Nasional">
+        <button id="addHoliday" class="btn-add">Tambah</button>
+      </div>
     </div>
   </div>
 
@@ -62,14 +83,35 @@
     const todayBtn = document.getElementById('today');
     const monthSelect = document.getElementById('monthSelect');
     const yearSelect = document.getElementById('yearSelect');
+    const holidayList = document.getElementById('holidayList');
+    const holidayMonth = document.getElementById('holidayMonth');
+    const holidayDate = document.getElementById('holidayDate');
+    const holidayName = document.getElementById('holidayName');
+    const addHolidayBtn = document.getElementById('addHoliday');
 
     const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+    // Load dari localStorage atau default
+    let holidays = JSON.parse(localStorage.getItem('customHolidays') || '[]');
+    if(holidays.length === 0){
+      holidays = [
+        {date:'01-01', name:'Tahun Baru Masehi'},
+        {date:'14-02', name:'Hari Kasih Sayang'},
+        {date:'21-04', name:'Hari Kartini'},
+        {date:'01-05', name:'Hari Buruh Internasional'},
+        {date:'17-08', name:'Hari Kemerdekaan RI'},
+        {date:'28-10', name:'Hari Sumpah Pemuda'},
+        {date:'10-11', name:'Hari Pahlawan'},
+        {date:'25-12', name:'Hari Natal'}
+      ];
+      localStorage.setItem('customHolidays', JSON.stringify(holidays));
+    }
+
     const thisYear = new Date().getFullYear();
 
-    // isi dropdown bulan & tahun
     namaBulan.forEach((m,i)=>{
-      const opt=document.createElement('option');
-      opt.value=i;opt.textContent=m;monthSelect.appendChild(opt);
+      const opt=document.createElement('option');opt.value=i;opt.textContent=m;monthSelect.appendChild(opt);
+      const opt2=document.createElement('option');opt2.value=i;opt2.textContent=m;holidayMonth.appendChild(opt2);
     });
     for(let y=thisYear-10;y<=thisYear+10;y++){
       const opt=document.createElement('option');opt.value=y;opt.textContent=y;yearSelect.appendChild(opt);
@@ -87,6 +129,15 @@
       dd.setDate(dd.getDate() - diff);
       dd.setHours(0,0,0,0);
       return dd;
+    }
+
+    function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+    function keyForDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    function formatDateLong(d){ return d.getDate() + ' ' + namaBulan[d.getMonth()] + ' ' + d.getFullYear(); }
+
+    function getHoliday(date){
+      const key = String(date.getDate()).padStart(2,'0') + '-' + String(date.getMonth()+1).padStart(2,'0');
+      return holidays.find(h=>h.date===key);
     }
 
     function render(){
@@ -113,6 +164,9 @@
         if(d.getMonth() !== month) cell.classList.add('out');
         if(sameDay(d, today)) cell.classList.add('today');
 
+        const holiday = getHoliday(d);
+        if(holiday) cell.classList.add('holiday');
+
         const dateEl = document.createElement('div');
         dateEl.className = 'date';
         dateEl.textContent = d.getDate();
@@ -127,6 +181,13 @@
             evBox.appendChild(ev);
           }
         }
+        if(holiday){
+          const h = document.createElement('div');
+          h.className='event';
+          h.style.background='rgba(255,180,0,0.2)';
+          h.textContent = holiday.name;
+          evBox.appendChild(h);
+        }
         cell.appendChild(evBox);
 
         cell.addEventListener('click', ()=>{
@@ -140,11 +201,35 @@
 
         grid.appendChild(cell);
       }
+      renderHolidayList(month);
     }
 
-    function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
-    function keyForDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
-    function formatDateLong(d){ return d.getDate() + ' ' + namaBulan[d.getMonth()] + ' ' + d.getFullYear(); }
+    function renderHolidayList(month){
+      holidayList.innerHTML = '';
+      const list = holidays.filter(h=>parseInt(h.date.split('-')[1])===month+1);
+      if(list.length===0){ holidayList.innerHTML = '<div style="color:var(--muted)">Tidak ada hari penting di bulan ini.</div>'; return; }
+      for(const h of list){
+        const item = document.createElement('div');
+        item.className = 'holiday-item';
+        item.textContent = h.date.split('-')[0] + ' ' + namaBulan[month] + ' - ' + h.name;
+        item.addEventListener('click', ()=>{
+          alert('Hari Nasional: '+h.name+' pada '+h.date.split('-')[0]+' '+namaBulan[month]);
+        });
+        holidayList.appendChild(item);
+      }
+    }
+
+    addHolidayBtn.addEventListener('click', ()=>{
+      const day = parseInt(holidayDate.value);
+      const month = parseInt(holidayMonth.value);
+      const name = holidayName.value.trim();
+      if(!day || !name){ alert('Lengkapi tanggal dan nama.'); return; }
+      const dateKey = String(day).padStart(2,'0') + '-' + String(month+1).padStart(2,'0');
+      holidays.push({date:dateKey, name});
+      localStorage.setItem('customHolidays', JSON.stringify(holidays));
+      holidayDate.value=''; holidayName.value='';
+      render();
+    });
 
     prev.addEventListener('click', ()=>{ view = new Date(view.getFullYear(), view.getMonth()-1, 1); render(); });
     next.addEventListener('click', ()=>{ view = new Date(view.getFullYear(), view.getMonth()+1, 1); render(); });
