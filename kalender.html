@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kalender Sederhana</title>
+  <style>
+    :root{--bg:#f6f8fa;--card:#ffffff;--accent:#0ea5a4;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0; padding:24px; color:#0f172a}
+    .wrap{max-width:920px;margin:0 auto}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(2,6,23,0.06)}
+    header{display:flex;align-items:center;gap:12px}
+    h1{font-size:18px;margin:0}
+    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+    .small{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--muted);padding:6px 10px}
+    .month-year{font-weight:700;font-size:16px}
+    .calendar{margin-top:14px}
+    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px}
+    .cell{min-height:86px;border-radius:8px;padding:8px;background:linear-gradient(180deg,rgba(2,6,23,0.01),transparent);position:relative}
+    .cell.out{opacity:0.35}
+    .cell.today{box-shadow:inset 0 0 0 2px rgba(14,165,164,0.18);border:1px solid rgba(14,165,164,0.15)}
+    .date{position:absolute;top:8px;right:8px;font-weight:700}
+    .events{margin-top:28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+    .event{background:rgba(14,165,164,0.12);padding:6px 8px;border-radius:6px;color:#064e4a}
+    .footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:640px){.cell{min-height:68px}.date{font-size:12px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <h1>Kalender Sederhana</h1>
+        <div class="controls">
+          <button id="prev">‹ Bulan Sebelumnya</button>
+          <div style="display:flex;flex-direction:column;align-items:center;padding:6px 10px;border-radius:8px;background:#f8fafc;border:1px solid rgba(2,6,23,0.03)">
+            <div class="month-year" id="monthYear">Maret 2025</div>
+            <div style="font-size:12px;color:var(--muted)" id="weekRange"> </div>
+          </div>
+          <button id="next">Bulan Berikutnya ›</button>
+          <button id="today" class="small">Hari Ini</button>
+        </div>
+      </header>
+
+      <div class="calendar">
+        <div class="weekdays" aria-hidden="true">
+          <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+        </div>
+        <div class="grid" id="grid"></div>
+      </div>
+
+      <div class="footer">Klik tanggal untuk menambahkan catatan/agenda kecil (disimpan sementara di localStorage browser).</div>
+    </div>
+  </div>
+
+  <script>
+    // Kalender Sederhana - Bahasa Indonesia
+    const grid = document.getElementById('grid');
+    const monthYear = document.getElementById('monthYear');
+    const weekRange = document.getElementById('weekRange');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    const todayBtn = document.getElementById('today');
+
+    let view = new Date(); // bulan yang sedang dilihat
+
+    // load events dari localStorage
+    const storageKey = 'simple-calendar-events';
+    const events = JSON.parse(localStorage.getItem(storageKey) || '{}');
+
+    function saveEvents(){ localStorage.setItem(storageKey, JSON.stringify(events)); }
+
+    function startOfWeek(d){ // minggu dimulai pada Minggu (0)
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const diff = dd.getDay();
+      dd.setDate(dd.getDate() - diff);
+      dd.setHours(0,0,0,0);
+      return dd;
+    }
+
+    function render(){
+      grid.innerHTML = '';
+      const year = view.getFullYear();
+      const month = view.getMonth();
+
+      const firstOfMonth = new Date(year, month, 1);
+      const start = startOfWeek(firstOfMonth);
+
+      // buat 6 minggu (42 sel) untuk menutupi semua variasi
+      const cells = [];
+      for(let i=0;i<42;i++){
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        cells.push(d);
+      }
+
+      // tampilkan header bulan
+      const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      monthYear.textContent = namaBulan[month] + ' ' + year;
+
+      // range minggu (misalnya 2 Mar - 5 Apr)
+      const first = cells[0];
+      const last = cells[cells.length-1];
+      weekRange.textContent = formatDateShort(first) + ' — ' + formatDateShort(last);
+
+      const today = new Date();
+      const todayKey = keyForDate(today);
+
+      for(const d of cells){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if(d.getMonth() !== month) cell.classList.add('out');
+        if(sameDay(d, today)) cell.classList.add('today');
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'date';
+        dateEl.textContent = d.getDate();
+        cell.appendChild(dateEl);
+
+        const evBox = document.createElement('div');
+        evBox.className = 'events';
+        const key = keyForDate(d);
+        if(events[key]){
+          for(const e of events[key]){
+            const ev = document.createElement('div'); ev.className='event'; ev.textContent = e;
+            evBox.appendChild(ev);
+          }
+        }
+        cell.appendChild(evBox);
+
+        // klik untuk tambah/lihat event
+        cell.addEventListener('click', ()=>{
+          const text = prompt('Catatan untuk ' + formatDateLong(d) + ':', (events[key] ? events[key].join(' | ') : ''));
+          if(text === null) return; // batal
+          const trimmed = text.trim();
+          if(trimmed === ''){ delete events[key]; } else { events[key] = trimmed.split('\n').map(s => s.trim()).filter(Boolean); }
+          saveEvents();
+          render();
+        });
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+    function keyForDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    function formatDateShort(d){ return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getMonth()] + ' ' + d.getFullYear(); }
+    function formatDateLong(d){ return d.getDate() + ' ' + ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][d.getMonth()] + ' ' + d.getFullYear(); }
+
+    prev.addEventListener('click', ()=>{ view = new Date(view.getFullYear(), view.getMonth()-1, 1); render(); });
+    next.addEventListener('click', ()=>{ view = new Date(view.getFullYear(), view.getMonth()+1, 1); render(); });
+    todayBtn.addEventListener('click', ()=>{ view = new Date(); render(); });
+
+    // render awal
+    render();
+  </script>
+</body>
+</html>
