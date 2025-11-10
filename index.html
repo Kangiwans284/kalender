@@ -80,6 +80,33 @@ table {
   border-collapse: collapse;
   text-align: center;
 }
+/* Tambahkan ini di bawah aturan table { ... } */
+table, th, td {
+  border: 1px solid #ccc;
+  border-collapse: collapse;
+}
+
+td, th {
+  border: 1px solid #ddd;
+}
+
+th {
+  background-color: #009688;
+  color: white;
+  font-weight: 600;
+  padding: 10px;
+}
+
+td {
+  padding: 12px;
+  text-align: center;
+  font-size: 15px;
+  transition: background 0.3s;
+}
+
+td:hover {
+  background: #e0f2f1;
+}
 
 th {
   background-color: #009688;
